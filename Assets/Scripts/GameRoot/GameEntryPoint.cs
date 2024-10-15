@@ -1,3 +1,4 @@
+using BaCon;
 using R3;
 using System.Collections;
 using UnityEngine;
@@ -8,6 +9,10 @@ public class GameEntryPoint
     private static GameEntryPoint instance;
     private Coroutines coroutines;
     private UIRootView rootView;
+
+    private readonly DIContainer rootContainer= new();
+
+    private DIContainer cachedSceneContainer;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static void AutoStartGame()
@@ -25,6 +30,9 @@ public class GameEntryPoint
         var prefabUIRoot = Resources.Load<UIRootView>("UIRoot");
         rootView = Object.Instantiate(prefabUIRoot);
         Object.DontDestroyOnLoad (rootView.gameObject);
+        rootContainer.RegisterInstance(rootView);
+
+        rootContainer.RegisterFactory(x=> new CommonService()).AsSingle();
     }
     private void StartGame()
     {
@@ -53,6 +61,7 @@ public class GameEntryPoint
     private IEnumerator LoadAndStartGameplay(GameplayEntryParams gameplayEntryParams)
     {
         rootView.ShowLoadingScript();
+        cachedSceneContainer?.Dispose();
 
         yield return LoadScene(ScenesName.BOOT);
         yield return LoadScene(ScenesName.GAMEPLAY);
@@ -60,7 +69,10 @@ public class GameEntryPoint
         yield return new WaitForEndOfFrame();
 
         var sceneEntryPoint=Object.FindObjectOfType<GameplayEntryPoint>();
-        sceneEntryPoint.Run(rootView, gameplayEntryParams).Subscribe(gameplayExitParams =>
+
+        var gameplayContainer = cachedSceneContainer = new DIContainer(rootContainer);
+
+        sceneEntryPoint.Run(gameplayContainer, gameplayEntryParams).Subscribe(gameplayExitParams =>
         {
             coroutines.StartCoroutine(LoadAndStartMainMenu(gameplayExitParams.MainMenuEntryParams));
         });
@@ -70,6 +82,7 @@ public class GameEntryPoint
     private IEnumerator LoadAndStartMainMenu(MainMenuEntryParams mainMenuEntryParams = null)
     {
         rootView.ShowLoadingScript();
+        cachedSceneContainer?.Dispose();
 
         yield return LoadScene(ScenesName.BOOT);
         yield return LoadScene(ScenesName.MAINMENU);
@@ -77,7 +90,9 @@ public class GameEntryPoint
         yield return new WaitForEndOfFrame();
 
         var sceneEntryPoint = Object.FindObjectOfType<MainMenuEntryPoint>();
-        sceneEntryPoint.Run(rootView,mainMenuEntryParams).Subscribe(mainMenuExitParams =>
+        var mainMenuContainer= cachedSceneContainer = new DIContainer(rootContainer);
+
+        sceneEntryPoint.Run(mainMenuContainer,mainMenuEntryParams).Subscribe(mainMenuExitParams =>
         {
             var targetSceneName = mainMenuExitParams.TargetSceneEnterParams.SceneName;
 

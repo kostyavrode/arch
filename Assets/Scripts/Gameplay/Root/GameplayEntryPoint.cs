@@ -1,3 +1,4 @@
+using BaCon;
 using R3;
 using System;
 using System.Collections;
@@ -12,11 +13,20 @@ public class GameplayEntryPoint : MonoBehaviour
     [SerializeField] private GameObject sceneRootBinder;
     [SerializeField] private UIGameplayRootBinder uiBinder;
 
-    public Observable<GameplayExitParams> Run(UIRootView uIRoot, GameplayEntryParams gameplayEntryParams)
+    public Observable<GameplayExitParams> Run(DIContainer container, GameplayEntryParams gameplayEntryParams)
     {
+        GameplayRegistrations.Register(container, gameplayEntryParams);
+
+        var gameplayViewModelsContainer = new DIContainer(container);
+        GameplayViewModelRegistrations.Register(gameplayViewModelsContainer);
+
+        gameplayViewModelsContainer.Resolve<UIGameplayRootViewModel>(); 
+        gameplayViewModelsContainer.Resolve<WorldGameplayRootViewModel>();
+
+        var uiRoot=container.Resolve<UIRootView>();
         Debug.Log("Gameplay Scene Loaded");
         var ui = Instantiate(uiBinder);
-        uIRoot.AttachSceneUI(ui.gameObject);
+        uiRoot.AttachSceneUI(ui.gameObject);
 
         var exitSceneSignalSubject = new Subject<Unit>();
 

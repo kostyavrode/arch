@@ -1,3 +1,4 @@
+using BaCon;
 using R3;
 using System;
 using System.Collections;
@@ -10,14 +11,23 @@ public class MainMenuEntryPoint : MonoBehaviour
     [SerializeField] private GameObject sceneRootBinder;
     [SerializeField] private UIMainMenuRootBinder uiBinder;
 
-    public Observable<MainMenuExitParams> Run(UIRootView uIRoot, MainMenuEntryParams mainMenuEntryParams)
+    public Observable<MainMenuExitParams> Run(DIContainer container, MainMenuEntryParams mainMenuEntryParams)
     {
+        var uiRoot=container.Resolve<UIRootView>();
+
+        MainMenuRegistrations.Register(container, mainMenuEntryParams);
+        var mainMenuViewModelsContainer = new DIContainer(container);
+        MainMenuViewModelRegistrations.Register(container);
+
+
+        // test
+        mainMenuViewModelsContainer.Resolve<UIMainMenuViewModel>();
 
 
 
         Debug.Log("Gameplay Scene Loaded");
         var ui = Instantiate(uiBinder);
-        uIRoot.AttachSceneUI(ui.gameObject);
+        uiRoot.AttachSceneUI(ui.gameObject);
         Debug.Log("Main Menu+ " + mainMenuEntryParams?.Result);
 
         var exitSignalSubject = new Subject<Unit>();
